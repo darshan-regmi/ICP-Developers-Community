@@ -1,0 +1,316 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #EEEEEE;
+  --bg-2: #E3FDFD;
+  --fg: #222831;
+  --fg-2: #393E46;
+  --accent: #00ADB5;
+  --rule: rgba(34, 40, 49, 0.18);
+  --grain: 0.04;
+}
+
+.dark {
+  --bg: #222831;
+  --bg-2: #1a1f26;
+  --fg: #EEEEEE;
+  --fg-2: #CBD5DC;
+  --accent: #00ADB5;
+  --rule: rgba(238, 238, 238, 0.18);
+  --grain: 0.06;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+}
+
+::selection {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+/* Kinetic headline (rolling shutter) */
+.kinetic-window {
+  position: relative;
+  display: inline-block;
+  vertical-align: bottom;
+  overflow: hidden;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.kinetic-window > span {
+  display: block;
+  white-space: nowrap;
+}
+
+@keyframes kinetic-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0%);
+    opacity: 1;
+  }
+}
+
+@keyframes kinetic-out {
+  from {
+    transform: translateY(0%);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+.kinetic-in {
+  animation: kinetic-in 700ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+.kinetic-out {
+  position: absolute !important;
+  inset: 0;
+  animation: kinetic-out 700ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+/* Global film-grain backplate */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  opacity: var(--grain);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
+}
+
+.dark body::before {
+  mix-blend-mode: screen;
+}
+
+/* Hairline rules */
+.rule {
+  background: var(--rule);
+}
+
+.border-rule {
+  border-color: var(--rule);
+}
+
+/* Brutalist box */
+.brutal-border {
+  border: 1.5px solid var(--fg);
+}
+
+/* Section paddings */
+.section {
+  padding-top: clamp(6rem, 12vw, 12rem);
+  padding-bottom: clamp(6rem, 12vw, 12rem);
+}
+
+.gutter {
+  padding-left: clamp(1.5rem, 5vw, 4rem);
+  padding-right: clamp(1.5rem, 5vw, 4rem);
+}
+
+/* Swiss grid overlay (hero only) */
+.grid-overlay {
+  background-image: linear-gradient(
+    to right,
+    var(--rule) 1px,
+    transparent 1px
+  );
+  background-size: calc(100% / 12) 100%;
+  opacity: 0.5;
+}
+
+/* Magnetic / hover-invert primary button */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border: 1.5px solid var(--fg);
+  background: var(--fg);
+  color: var(--bg);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  transition: transform 200ms ease-out, background 0ms, color 0ms;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border: 1.5px solid var(--fg);
+  background: transparent;
+  color: var(--fg);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+/* Reveal animation */
+@keyframes reveal {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0%);
+  }
+}
+
+.reveal-mask {
+  overflow: hidden;
+}
+
+.reveal-inner {
+  animation: reveal 800ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Scroll-driven progress line */
+.scroll-line {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: var(--rule);
+  z-index: 50;
+  pointer-events: none;
+}
+
+.scroll-line-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: var(--accent);
+  transform-origin: top;
+}
+
+/* Numeric stroke (giant outline numerals used as scaffold) */
+.outline-num {
+  -webkit-text-stroke: 1.5px var(--rule);
+  color: transparent;
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 0.85;
+  letter-spacing: -0.05em;
+}
+
+/* Marquee one-pass */
+@keyframes marquee-once {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.marquee-once {
+  display: inline-flex;
+  animation: marquee-once 24s linear both;
+}
+
+/* Modal overlay */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  background-color: color-mix(in srgb, var(--bg) 92%, transparent);
+  z-index: 80;
+  overflow-y: auto;
+  animation: backdropIn 200ms ease-out;
+}
+
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-panel {
+  background: var(--bg);
+  border: 1.5px solid var(--fg);
+  animation: panelIn 280ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.field {
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: var(--fg);
+  border: 1.5px solid var(--fg);
+  padding: 0.875rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.field-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+  margin-bottom: 0.5rem;
+}
