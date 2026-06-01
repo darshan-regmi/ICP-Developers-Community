@@ -13,11 +13,13 @@ export function Frame() {
       {/* Top-left: wordmark */}
       <div className="fixed top-3 left-3 md:top-5 md:left-5 z-40">
         <Link
-          href="#hero"
+          href="/"
           aria-label="ICP Developers' Community — home"
           className={`${pillBase} gap-2 font-mono text-meta tracking-[0.08em] uppercase`}
         >
-          <span className="px-1.5 py-0.5 bg-[var(--fg)] text-[var(--bg)]">ICP</span>
+          <span className="px-1.5 py-0.5 bg-[var(--fg)] text-[var(--bg)]">
+            ICP
+          </span>
           <span className="hidden sm:inline opacity-90">
             Developers&apos; Community
           </span>
