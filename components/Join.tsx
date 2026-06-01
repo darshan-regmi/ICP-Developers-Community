@@ -4,16 +4,128 @@ import { useState, FormEvent } from "react";
 import { MonoLabel } from "./ui/MonoLabel";
 import { Modal } from "./ui/Modal";
 
-type FormState = "idle" | "submitting" | "done";
+type FormState = "idle" | "submitting" | "done" | "duplicate";
+
+type SubmitResult = "ok" | "duplicate";
+
+async function submitApplication(
+  payload: Record<string, unknown>
+): Promise<SubmitResult> {
+  const res = await fetch("/api/apply", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.status === 409) return "duplicate";
+  if (!res.ok) {
+    let message = "Could not submit your application. Please try again.";
+    try {
+      const data = (await res.json()) as { error?: string };
+      if (data?.error) message = data.error;
+    } catch {
+      /* keep default */
+    }
+    throw new Error(message);
+  }
+  return "ok";
+}
+
+function DuplicateMessage({ onDone }: { onDone: () => void }) {
+  return (
+    <div className="text-center py-6">
+      <MonoLabel className="block mb-4 text-[var(--accent)] opacity-100">
+        [ already on the list ]
+      </MonoLabel>
+      <h4 className="font-display font-semibold text-4xl md:text-5xl leading-[0.95]">
+        WOOOWWW.
+        <br />
+        HOLD ON.
+      </h4>
+      <p className="mt-6 text-base md:text-lg text-[var(--fg-2)] max-w-md mx-auto">
+        You&apos;re getting a little too excited to join, friend.
+      </p>
+      <p className="mt-2 text-base md:text-lg text-[var(--fg-2)] max-w-md mx-auto">
+        We&apos;ll be in touch — if we haven&apos;t already.
+      </p>
+      <p className="mt-6 font-mono text-meta uppercase opacity-70">
+        // hold your horses, lad.
+      </p>
+      <button onClick={onDone} className="btn-secondary mt-10">
+        close
+      </button>
+    </div>
+  );
+}
+
+// Hidden honeypot field — bots tend to fill every input they see; humans don't
+// see this one because it's visually hidden. Backend silently drops anything
+// where it's non-empty.
+function Honeypot() {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "absolute",
+        left: "-9999px",
+        width: 1,
+        height: 1,
+        overflow: "hidden",
+      }}
+    >
+      <label>
+        Company (leave blank)
+        <input type="text" name="company" tabIndex={-1} autoComplete="off" />
+      </label>
+    </div>
+  );
+}
+
+function ErrorBox({ message }: { message: string }) {
+  return (
+    <div
+      role="alert"
+      className="brutal-border p-3 font-mono text-meta uppercase"
+      style={{ borderColor: "currentColor" }}
+    >
+      <span className="text-[var(--accent)]">error · </span>
+      <span className="opacity-80">{message}</span>
+    </div>
+  );
+}
 
 function CoreTeamForm({ onDone }: { onDone: () => void }) {
   const [state, setState] = useState<FormState>("idle");
+  const [error, setError] = useState<string | null>(null);
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (state === "submitting") return;
     setState("submitting");
-    setTimeout(() => setState("done"), 600);
+    setError(null);
+
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      type: "core" as const,
+      name: fd.get("name"),
+      email: fd.get("email"),
+      github: fd.get("github"),
+      projectRepo: fd.get("projectRepo"),
+      projectLive: fd.get("projectLive"),
+      company: fd.get("company"), // honeypot
+    };
+
+    try {
+      const result = await submitApplication(payload);
+      setState(result === "duplicate" ? "duplicate" : "done");
+    } catch (err) {
+      setState("idle");
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    }
   };
+
+  if (state === "duplicate") {
+    return <DuplicateMessage onDone={onDone} />;
+  }
 
   if (state === "done") {
     return (
@@ -38,9 +150,14 @@ function CoreTeamForm({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <p className="text-base text-[var(--fg-2)]">
-        Core team is for builders who are ready to ship and help run the
-        community. Share one project you&apos;ve built — that&apos;s the bar.
+        Core team is for builders ready to ship. Share one project
+        you&apos;ve built — that&apos;s the bar.{" "}
+        <span className="text-[var(--fg)]">
+          Open to @icp.edu.np students only.
+        </span>
       </p>
+
+      <Honeypot />
 
       <div>
         <label className="field-label" htmlFor="ct-name">
@@ -48,34 +165,30 @@ function CoreTeamForm({ onDone }: { onDone: () => void }) {
         </label>
         <input
           id="ct-name"
+          name="name"
           className="field"
           type="text"
           required
           placeholder="full name"
-        />
-      </div>
-      <div>
-        <label className="field-label" htmlFor="ct-college">
-          college
-        </label>
-        <input
-          id="ct-college"
-          className="field"
-          type="text"
-          required
-          placeholder="e.g. Informatics College Pokhara"
+          autoComplete="name"
         />
       </div>
       <div>
         <label className="field-label" htmlFor="ct-email">
-          college email
+          email
         </label>
         <input
           id="ct-email"
+          name="email"
           className="field"
           type="email"
           required
-          placeholder="you@college.edu.np"
+          placeholder="you@icp.edu.np"
+          pattern="[^@\s]+@icp\.edu\.np$"
+          title="Must be an @icp.edu.np address"
+          autoComplete="email"
+          inputMode="email"
+          spellCheck={false}
         />
       </div>
       <div>
@@ -84,6 +197,7 @@ function CoreTeamForm({ onDone }: { onDone: () => void }) {
         </label>
         <input
           id="ct-github"
+          name="github"
           className="field"
           type="url"
           required
@@ -96,6 +210,7 @@ function CoreTeamForm({ onDone }: { onDone: () => void }) {
         </label>
         <input
           id="ct-project"
+          name="projectRepo"
           className="field"
           type="url"
           required
@@ -108,6 +223,7 @@ function CoreTeamForm({ onDone }: { onDone: () => void }) {
         </label>
         <input
           id="ct-live"
+          name="projectLive"
           className="field"
           type="url"
           required
@@ -115,12 +231,14 @@ function CoreTeamForm({ onDone }: { onDone: () => void }) {
         />
       </div>
 
+      {error && <ErrorBox message={error} />}
+
       <button
         type="submit"
         disabled={state === "submitting"}
-        className="btn-primary w-full justify-center"
+        className="btn-primary w-full justify-center disabled:opacity-60"
       >
-        {state === "submitting" ? "submitting…" : "submit application →"}
+        {state === "submitting" ? "sending…" : "submit application →"}
       </button>
     </form>
   );
@@ -128,12 +246,36 @@ function CoreTeamForm({ onDone }: { onDone: () => void }) {
 
 function GeneralMemberForm({ onDone }: { onDone: () => void }) {
   const [state, setState] = useState<FormState>("idle");
+  const [error, setError] = useState<string | null>(null);
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (state === "submitting") return;
     setState("submitting");
-    setTimeout(() => setState("done"), 600);
+    setError(null);
+
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      type: "general" as const,
+      name: fd.get("name"),
+      email: fd.get("email"),
+      github: fd.get("github"),
+      why: fd.get("why"),
+      company: fd.get("company"), // honeypot
+    };
+
+    try {
+      const result = await submitApplication(payload);
+      setState(result === "duplicate" ? "duplicate" : "done");
+    } catch (err) {
+      setState("idle");
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    }
   };
+
+  if (state === "duplicate") {
+    return <DuplicateMessage onDone={onDone} />;
+  }
 
   if (state === "done") {
     return (
@@ -141,7 +283,8 @@ function GeneralMemberForm({ onDone }: { onDone: () => void }) {
         <MonoLabel className="block mb-3 opacity-100">[ welcome ]</MonoLabel>
         <h4 className="font-display font-semibold text-3xl">You&apos;re in.</h4>
         <p className="mt-3 text-base text-[var(--fg-2)]">
-          Check your email for a Discord invite and an onboarding doc.
+          We&apos;ll be in touch with a Discord invite and onboarding doc
+          shortly.
         </p>
         <button onClick={onDone} className="btn-secondary mt-8">
           close
@@ -153,9 +296,14 @@ function GeneralMemberForm({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <p className="text-base text-[var(--fg-2)]">
-        Open to all students. Tell us a little about why you&apos;re joining and
-        we&apos;ll send you everything you need to get started.
+        Tell us a little about why you&apos;re joining and we&apos;ll send you
+        everything you need to get started.{" "}
+        <span className="text-[var(--fg)]">
+          Open to @icp.edu.np students only.
+        </span>
       </p>
+
+      <Honeypot />
 
       <div>
         <label className="field-label" htmlFor="gm-name">
@@ -163,34 +311,30 @@ function GeneralMemberForm({ onDone }: { onDone: () => void }) {
         </label>
         <input
           id="gm-name"
+          name="name"
           className="field"
           type="text"
           required
           placeholder="full name"
-        />
-      </div>
-      <div>
-        <label className="field-label" htmlFor="gm-college">
-          college
-        </label>
-        <input
-          id="gm-college"
-          className="field"
-          type="text"
-          required
-          placeholder="e.g. Informatics College Pokhara"
+          autoComplete="name"
         />
       </div>
       <div>
         <label className="field-label" htmlFor="gm-email">
-          college email
+          email
         </label>
         <input
           id="gm-email"
+          name="email"
           className="field"
           type="email"
           required
-          placeholder="you@college.edu.np"
+          placeholder="you@icp.edu.np"
+          pattern="[^@\s]+@icp\.edu\.np$"
+          title="Must be an @icp.edu.np address"
+          autoComplete="email"
+          inputMode="email"
+          spellCheck={false}
         />
       </div>
       <div>
@@ -199,6 +343,7 @@ function GeneralMemberForm({ onDone }: { onDone: () => void }) {
         </label>
         <input
           id="gm-github"
+          name="github"
           className="field"
           type="url"
           required
@@ -211,6 +356,7 @@ function GeneralMemberForm({ onDone }: { onDone: () => void }) {
         </label>
         <textarea
           id="gm-why"
+          name="why"
           className="field"
           required
           rows={4}
@@ -218,12 +364,14 @@ function GeneralMemberForm({ onDone }: { onDone: () => void }) {
         />
       </div>
 
+      {error && <ErrorBox message={error} />}
+
       <button
         type="submit"
         disabled={state === "submitting"}
-        className="btn-primary w-full justify-center"
+        className="btn-primary w-full justify-center disabled:opacity-60"
       >
-        {state === "submitting" ? "submitting…" : "submit application →"}
+        {state === "submitting" ? "sending…" : "submit application →"}
       </button>
     </form>
   );

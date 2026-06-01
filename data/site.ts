@@ -65,6 +65,11 @@ export const site = {
   contact: {
     email: "dev@icp.edu.np", // e.g. "hello@icp-dc.com"
   },
+  membership: {
+    // Applications are restricted to this email domain.
+    // Change here once + the API + form copy + duplicate logic all follow.
+    emailDomain: "icp.edu.np",
+  },
   // Used by Google Search Console verification meta tag if/when set.
   verification: {
     google: "", // paste the content="..." value from the meta tag

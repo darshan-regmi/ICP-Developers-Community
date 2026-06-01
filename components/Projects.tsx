@@ -11,7 +11,7 @@ import {
   type ProjectCategory,
 } from "@/data/projects";
 
-const FILTERS = ["all", "web", "ai", "tools", "games", "hardware"] as const;
+const FILTERS = ["all", "web"] as const;
 type Filter = (typeof FILTERS)[number];
 
 function Specimen({

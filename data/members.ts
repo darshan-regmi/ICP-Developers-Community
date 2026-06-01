@@ -30,7 +30,7 @@ export const members: Member[] = [
     role: "Backend Developer & Vice President",
     quote:
       "I work on the visual side of things and help new members find their way in. Reach out if you're not sure where to start.",
-    initials: "SK",
+    initials: "SG",
     portfolio: "https://snehagiri.com.np",
     socials: [
       { label: "github", href: "https://github.com/meoov-1" },

@@ -1,7 +1,7 @@
 // Project showcase data. The first `featuredCount` projects are visible by
 // default; the rest reveal via the "view all projects" button.
 
-export type ProjectCategory = "web" | "ai" | "tools" | "games" | "hardware";
+export type ProjectCategory = "web";
 
 export type Project = {
   n: string;

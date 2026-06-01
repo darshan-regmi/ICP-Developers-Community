@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { slogans } from "@/data/headline";
 
 export function Footer() {
@@ -14,7 +15,14 @@ export function Footer() {
           </p>
         </div>
         <div className="space-y-1 md:text-right">
-          <p className="opacity-60">designed &amp; built in pokhara</p>
+          <p className="opacity-60">
+            <Link
+              href="/colophon"
+              className="hover:text-[var(--accent)] hover:opacity-100 underline-offset-4 hover:underline"
+            >
+              designed &amp; built in pokhara → colophon
+            </Link>
+          </p>
           <p className="opacity-60">
             tip: press <kbd className="px-1 border border-rule">?</kbd> for shortcuts
           </p>

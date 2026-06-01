@@ -1,9 +1,40 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { SectionHeader } from "./ui/SectionHeader";
 import { MonoLabel } from "./ui/MonoLabel";
-import { members, rosterSummary } from "@/data/members";
+import { members, rosterSummary, type Member } from "@/data/members";
+import { githubUsernameOf, githubAvatarUrl } from "@/lib/github";
+
+function Avatar({ member, dim = false }: { member: Member; dim?: boolean }) {
+  const username = githubUsernameOf(member);
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = username && !imageFailed;
+
+  return (
+    <>
+      {/* Initials sit behind — visible while the image loads, and after a 404. */}
+      <span
+        className={`absolute inset-0 flex items-center justify-center font-display text-3xl md:text-5xl font-semibold transition-opacity duration-200 ${dim ? "group-hover:opacity-0" : ""} opacity-80`}
+      >
+        {member.initials}
+      </span>
+
+      {showImage && (
+        <Image
+          src={githubAvatarUrl(username, 400)}
+          alt=""
+          fill
+          sizes="(max-width: 768px) 25vw, 160px"
+          className={`object-cover transition-opacity duration-200 ${dim ? "group-hover:opacity-0" : ""}`}
+          onError={() => setImageFailed(true)}
+          unoptimized={false}
+        />
+      )}
+    </>
+  );
+}
 
 export function Team() {
   const [open, setOpen] = useState<number | null>(null);
@@ -52,21 +83,17 @@ export function Team() {
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={`View ${m.name}'s portfolio`}
-                        className="group aspect-square brutal-border flex items-center justify-center bg-[var(--bg-2)] relative overflow-hidden cursor-pointer hover:bg-[var(--accent)] hover:border-[var(--accent)] transition-colors duration-0"
+                        className="group aspect-square brutal-border relative overflow-hidden bg-[var(--bg-2)] cursor-pointer hover:bg-[var(--accent)] hover:border-[var(--accent)] transition-colors duration-0 block"
                       >
-                        <span className="font-display text-3xl md:text-5xl font-semibold opacity-80 transition-opacity duration-200 group-hover:opacity-0">
-                          {m.initials}
-                        </span>
-                        <span className="absolute inset-0 flex flex-col items-center justify-center font-mono text-meta uppercase text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 text-center px-2">
+                        <Avatar member={m} dim />
+                        <span className="absolute inset-0 flex flex-col items-center justify-center font-mono text-meta uppercase text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 text-center px-2 z-10">
                           <span>view</span>
                           <span>portfolio ↗</span>
                         </span>
                       </a>
                     ) : (
-                      <div className="aspect-square brutal-border flex items-center justify-center bg-[var(--bg-2)]">
-                        <span className="font-display text-3xl md:text-5xl font-semibold opacity-80">
-                          {m.initials}
-                        </span>
+                      <div className="aspect-square brutal-border relative overflow-hidden bg-[var(--bg-2)]">
+                        <Avatar member={m} />
                       </div>
                     )}
                   </div>
