@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- `<` bracket — teal accent -->
+  <path d="M27 14 L11 32 L27 50"
+        fill="none"
+        stroke="#00ADB5"
+        stroke-width="7"
+        stroke-linejoin="miter"
+        stroke-miterlimit="3"
+        stroke-linecap="butt"/>
+
+  <!-- `>` bracket — paper white -->
+  <path d="M37 14 L53 32 L37 50"
+        fill="none"
+        stroke="#EEEEEE"
+        stroke-width="7"
+        stroke-linejoin="miter"
+        stroke-miterlimit="3"
+        stroke-linecap="butt"/>
+</svg>

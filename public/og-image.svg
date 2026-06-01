@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap');
+      .display { font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif; font-weight: 600; }
+      .body    { font-family: 'Inter', system-ui, sans-serif; font-weight: 400; }
+      .body-em { font-family: 'Inter', system-ui, sans-serif; font-weight: 500; }
+      .mono    { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-weight: 400; letter-spacing: 0.08em; }
+      .mono-b  { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-weight: 500; letter-spacing: 0.08em; }
+    </style>
+  </defs>
+
+  <!-- Ink background -->
+  <rect width="1200" height="630" fill="#222831"/>
+
+  <!-- Subtle 12-col Swiss grid hint -->
+  <g stroke="#393E46" stroke-width="1" opacity="0.35">
+    <line x1="100"  y1="32" x2="100"  y2="598"/>
+    <line x1="200"  y1="32" x2="200"  y2="598"/>
+    <line x1="300"  y1="32" x2="300"  y2="598"/>
+    <line x1="400"  y1="32" x2="400"  y2="598"/>
+    <line x1="500"  y1="32" x2="500"  y2="598"/>
+    <line x1="600"  y1="32" x2="600"  y2="598"/>
+    <line x1="700"  y1="32" x2="700"  y2="598"/>
+    <line x1="800"  y1="32" x2="800"  y2="598"/>
+    <line x1="900"  y1="32" x2="900"  y2="598"/>
+    <line x1="1000" y1="32" x2="1000" y2="598"/>
+    <line x1="1100" y1="32" x2="1100" y2="598"/>
+  </g>
+
+  <!-- Hairline viewport frame -->
+  <rect x="32" y="32" width="1136" height="566" fill="none" stroke="#393E46" stroke-width="1"/>
+
+  <!-- Top-left wordmark (no pill border) -->
+  <g>
+    <rect x="64" y="71" width="46" height="24" fill="#EEEEEE"/>
+    <text x="87" y="88" class="mono-b" font-size="12" fill="#222831" text-anchor="middle">ICP</text>
+    <text x="120" y="88" class="mono" font-size="11" fill="#EEEEEE">DEVELOPERS' COMMUNITY</text>
+  </g>
+
+  <!-- Display headline -->
+  <text x="64" y="300" class="display" font-size="120" fill="#EEEEEE" letter-spacing="-4">WE BUILD</text>
+  <text x="64" y="420" class="display" font-size="120" fill="#00ADB5" letter-spacing="-4">IN PUBLIC.</text>
+
+  <!-- Subline -->
+  <text x="64" y="480" class="body" font-size="22" fill="#CBD5DC">
+    A student-led developer movement from
+    <tspan class="body-em" fill="#EEEEEE" text-decoration="underline">Informatics College, Pokhara.</tspan>
+  </text>
+
+  <!-- Brackets motif (right) — no backplate, no border -->
+  <g transform="translate(880, 200)">
+    <!-- `<` -->
+    <path d="M86 50 L42 110 L86 170"
+          fill="none"
+          stroke="#00ADB5"
+          stroke-width="16"
+          stroke-linejoin="miter"
+          stroke-miterlimit="3"/>
+    <!-- `>` -->
+    <path d="M134 50 L178 110 L134 170"
+          fill="none"
+          stroke="#EEEEEE"
+          stroke-width="16"
+          stroke-linejoin="miter"
+          stroke-miterlimit="3"/>
+  </g>
+
+  <!-- Bottom rule -->
+  <line x1="64" y1="540" x2="1136" y2="540" stroke="#393E46" stroke-width="1"/>
+
+  <!-- Footer meta -->
+  <text x="64" y="572" class="mono" font-size="13" fill="#EEEEEE" opacity="0.75">// WE LEARN BY SHIPPING.</text>
+  <text x="1136" y="572" class="mono" font-size="13" fill="#EEEEEE" opacity="0.75" text-anchor="end">POKHARA, NEPAL · 2026</text>
+</svg>

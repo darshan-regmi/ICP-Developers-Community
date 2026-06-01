@@ -24,10 +24,29 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
+const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : "https://icp-developers-community.vercel.app";
+
 export const metadata: Metadata = {
-  title: "ICP/DC — Informatics College Pokhara · Developers' Community",
+  metadataBase: new URL(siteUrl),
+  title: "ICP Developers' Community — Informatics College Pokhara",
   description:
-    "A student-led developer movement from Informatics College, Pokhara. We build in public. We ship on Fridays.",
+    "A student-led developer movement from Informatics College, Pokhara. We build in public. We learn by shipping.",
+  openGraph: {
+    title: "ICP Developers' Community",
+    description:
+      "A student-led developer movement from Informatics College, Pokhara. We build in public. We learn by shipping.",
+    siteName: "ICP Developers' Community",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ICP Developers' Community",
+    description:
+      "A student-led developer movement from Informatics College, Pokhara.",
+  },
 };
 
 export default function RootLayout({
