@@ -8,6 +8,8 @@ import {
   type GeneralPayload,
 } from "@/lib/email";
 import { validateEmail } from "@/lib/email-validation";
+import { verifyHcaptcha } from "@/lib/hcaptcha";
+import { rateLimit } from "@/lib/rate-limit";
 import { site } from "@/data/site";
 
 const FROM = process.env.RESEND_FROM || "ICP DC <onboarding@resend.dev>";
@@ -50,13 +52,20 @@ type ApplyBody = {
   projectLive?: string;
   why?: string;
   company?: string; // honeypot
+  hcaptchaToken?: string;
 };
+
+function getClientIp(req: Request): string {
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]!.trim();
+  return req.headers.get("x-real-ip") || "unknown";
+}
 
 export async function POST(req: Request) {
   if (!process.env.RESEND_API_KEY) {
     return NextResponse.json(
       { error: "Email service is not configured." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -64,7 +73,10 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid request body." },
+      { status: 400 },
+    );
   }
 
   // Honeypot: silently drop bot submissions.
@@ -72,9 +84,35 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  // Rate limit by client IP — blunts scripted floods even if hCaptcha is
+  // somehow bypassed. 5 attempts / 10 min per IP.
+  const ip = getClientIp(req);
+  const rl = rateLimit(`apply:${ip}`);
+  if (!rl.ok) {
+    return NextResponse.json(
+      {
+        error: `Too many attempts. Please try again in ${Math.ceil(rl.retryAfterSeconds / 60)} minute(s).`,
+      },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } },
+    );
+  }
+
+  // hCaptcha verification. Skipped when HCAPTCHA_SECRET_KEY is unset
+  // (local dev); the helper logs a warning in that case.
+  const captchaError = await verifyHcaptcha(
+    clean(body.hcaptchaToken, 4096),
+    ip,
+  );
+  if (captchaError) {
+    return NextResponse.json({ error: captchaError }, { status: 400 });
+  }
+
   const type = body.type;
   if (type !== "core" && type !== "general") {
-    return NextResponse.json({ error: "Invalid application type." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid application type." },
+      { status: 400 },
+    );
   }
 
   const name = clean(body.name, 120);
@@ -84,7 +122,7 @@ export async function POST(req: Request) {
   if (!name || !email || !github) {
     return NextResponse.json(
       { error: "All fields are required." },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -101,14 +139,14 @@ export async function POST(req: Request) {
       {
         error: `Applications are open to @${REQUIRED_DOMAIN} addresses only. Please use your college email.`,
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
   if (!isUrl(github)) {
     return NextResponse.json(
       { error: "GitHub URL must start with http(s)://" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -132,7 +170,7 @@ export async function POST(req: Request) {
     }
   } else {
     console.warn(
-      "[apply] RESEND_AUDIENCE_ID not set — duplicate-submission check disabled"
+      "[apply] RESEND_AUDIENCE_ID not set — duplicate-submission check disabled",
     );
   }
 
@@ -146,13 +184,13 @@ export async function POST(req: Request) {
       if (!projectRepo || !projectLive) {
         return NextResponse.json(
           { error: "Project repo and live URL are required for core team." },
-          { status: 400 }
+          { status: 400 },
         );
       }
       if (!isUrl(projectRepo) || !isUrl(projectLive)) {
         return NextResponse.json(
           { error: "Project URLs must start with http(s)://" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       const payload: CoreTeamPayload = {
@@ -168,11 +206,12 @@ export async function POST(req: Request) {
       if (!why) {
         return NextResponse.json(
           { error: "Please tell us why you want to join." },
-          { status: 400 }
+          { status: 400 },
         );
       }
       const payload: GeneralPayload = { name, email, github, why };
-      ({ subject: adminSubject, html: adminHtml } = generalMemberEmail(payload));
+      ({ subject: adminSubject, html: adminHtml } =
+        generalMemberEmail(payload));
     }
 
     // 4) Notify the admin.
@@ -187,7 +226,7 @@ export async function POST(req: Request) {
       console.error("[apply] admin send failed", adminErr);
       return NextResponse.json(
         { error: "Could not send the application. Please try again." },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
@@ -227,7 +266,7 @@ export async function POST(req: Request) {
     console.error("[apply] unexpected error", err);
     return NextResponse.json(
       { error: "Something went wrong on our side." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

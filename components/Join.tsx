@@ -1,12 +1,49 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useRef, useState, FormEvent } from "react";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
+import { useTheme } from "@/app/providers";
 import { MonoLabel } from "./ui/MonoLabel";
 import { Modal } from "./ui/Modal";
 
-type FormState = "idle" | "submitting" | "done" | "duplicate";
+type FormState =
+  | "idle"
+  | "submitting"
+  | "done"
+  | "duplicate"
+  | "alreadyApplied";
 
 type SubmitResult = "ok" | "duplicate";
+
+const HCAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || "";
+const STORAGE_KEY = "icp-dc:applied";
+
+type StoredSubmission = {
+  type: "core" | "general";
+  email: string;
+  at: number;
+};
+
+function readStoredSubmission(): StoredSubmission | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredSubmission;
+    return parsed && typeof parsed.email === "string" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistSubmission(s: StoredSubmission) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  } catch {
+    /* quota / disabled storage — non-fatal */
+  }
+}
 
 async function submitApplication(
   payload: Record<string, unknown>
@@ -57,6 +94,26 @@ function DuplicateMessage({ onDone }: { onDone: () => void }) {
   );
 }
 
+function AlreadyAppliedMessage({ onDone }: { onDone: () => void }) {
+  return (
+    <div className="text-center py-6">
+      <MonoLabel className="block mb-4 opacity-100">
+        [ application already on file ]
+      </MonoLabel>
+      <h4 className="font-display font-semibold text-3xl">
+        You&apos;ve already applied.
+      </h4>
+      <p className="mt-3 text-base text-[var(--fg-2)] max-w-md mx-auto">
+        We received an application from this browser. If you haven&apos;t
+        heard back yet, hold tight — we review every submission.
+      </p>
+      <button onClick={onDone} className="btn-secondary mt-8">
+        close
+      </button>
+    </div>
+  );
+}
+
 // Hidden honeypot field — bots tend to fill every input they see; humans don't
 // see this one because it's visually hidden. Backend silently drops anything
 // where it's non-empty.
@@ -93,9 +150,53 @@ function ErrorBox({ message }: { message: string }) {
   );
 }
 
+function CaptchaField({
+  captchaRef,
+  onVerify,
+  onExpire,
+}: {
+  captchaRef: React.RefObject<HCaptcha>;
+  onVerify: (token: string) => void;
+  onExpire: () => void;
+}) {
+  const { theme } = useTheme();
+  if (!HCAPTCHA_SITE_KEY) return null;
+  return (
+    <div>
+      <label className="field-label">verify you&apos;re human</label>
+      <div className="brutal-border p-3 inline-block">
+        {/* key forces a clean remount when the site theme toggles, so the
+            hCaptcha iframe re-renders in the matching palette. */}
+        <HCaptcha
+          key={theme}
+          ref={captchaRef}
+          sitekey={HCAPTCHA_SITE_KEY}
+          theme={theme}
+          onVerify={onVerify}
+          onExpire={onExpire}
+          onError={onExpire}
+        />
+      </div>
+    </div>
+  );
+}
+
 function CoreTeamForm({ onDone }: { onDone: () => void }) {
-  const [state, setState] = useState<FormState>("idle");
+  const [state, setState] = useState<FormState>(() =>
+    readStoredSubmission() ? "alreadyApplied" : "idle"
+  );
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string>("");
+  const captchaRef = useRef<HCaptcha>(null);
+
+  const captchaRequired = Boolean(HCAPTCHA_SITE_KEY);
+  const submitDisabled =
+    state === "submitting" || (captchaRequired && !captchaToken);
+
+  const resetCaptcha = () => {
+    setCaptchaToken("");
+    captchaRef.current?.resetCaptcha();
+  };
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -104,24 +205,37 @@ function CoreTeamForm({ onDone }: { onDone: () => void }) {
     setError(null);
 
     const fd = new FormData(e.currentTarget);
+    const email = String(fd.get("email") || "");
     const payload = {
       type: "core" as const,
       name: fd.get("name"),
-      email: fd.get("email"),
+      email,
       github: fd.get("github"),
       projectRepo: fd.get("projectRepo"),
       projectLive: fd.get("projectLive"),
       company: fd.get("company"), // honeypot
+      hcaptchaToken: captchaToken,
     };
 
     try {
       const result = await submitApplication(payload);
-      setState(result === "duplicate" ? "duplicate" : "done");
+      if (result === "duplicate") {
+        persistSubmission({ type: "core", email, at: Date.now() });
+        setState("duplicate");
+      } else {
+        persistSubmission({ type: "core", email, at: Date.now() });
+        setState("done");
+      }
     } catch (err) {
       setState("idle");
+      resetCaptcha();
       setError(err instanceof Error ? err.message : "Something went wrong.");
     }
   };
+
+  if (state === "alreadyApplied") {
+    return <AlreadyAppliedMessage onDone={onDone} />;
+  }
 
   if (state === "duplicate") {
     return <DuplicateMessage onDone={onDone} />;
@@ -231,11 +345,17 @@ function CoreTeamForm({ onDone }: { onDone: () => void }) {
         />
       </div>
 
+      <CaptchaField
+        captchaRef={captchaRef}
+        onVerify={setCaptchaToken}
+        onExpire={() => setCaptchaToken("")}
+      />
+
       {error && <ErrorBox message={error} />}
 
       <button
         type="submit"
-        disabled={state === "submitting"}
+        disabled={submitDisabled}
         className="btn-primary w-full justify-center disabled:opacity-60"
       >
         {state === "submitting" ? "sending…" : "submit application →"}
@@ -245,8 +365,21 @@ function CoreTeamForm({ onDone }: { onDone: () => void }) {
 }
 
 function GeneralMemberForm({ onDone }: { onDone: () => void }) {
-  const [state, setState] = useState<FormState>("idle");
+  const [state, setState] = useState<FormState>(() =>
+    readStoredSubmission() ? "alreadyApplied" : "idle"
+  );
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string>("");
+  const captchaRef = useRef<HCaptcha>(null);
+
+  const captchaRequired = Boolean(HCAPTCHA_SITE_KEY);
+  const submitDisabled =
+    state === "submitting" || (captchaRequired && !captchaToken);
+
+  const resetCaptcha = () => {
+    setCaptchaToken("");
+    captchaRef.current?.resetCaptcha();
+  };
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -255,23 +388,36 @@ function GeneralMemberForm({ onDone }: { onDone: () => void }) {
     setError(null);
 
     const fd = new FormData(e.currentTarget);
+    const email = String(fd.get("email") || "");
     const payload = {
       type: "general" as const,
       name: fd.get("name"),
-      email: fd.get("email"),
+      email,
       github: fd.get("github"),
       why: fd.get("why"),
       company: fd.get("company"), // honeypot
+      hcaptchaToken: captchaToken,
     };
 
     try {
       const result = await submitApplication(payload);
-      setState(result === "duplicate" ? "duplicate" : "done");
+      if (result === "duplicate") {
+        persistSubmission({ type: "general", email, at: Date.now() });
+        setState("duplicate");
+      } else {
+        persistSubmission({ type: "general", email, at: Date.now() });
+        setState("done");
+      }
     } catch (err) {
       setState("idle");
+      resetCaptcha();
       setError(err instanceof Error ? err.message : "Something went wrong.");
     }
   };
+
+  if (state === "alreadyApplied") {
+    return <AlreadyAppliedMessage onDone={onDone} />;
+  }
 
   if (state === "duplicate") {
     return <DuplicateMessage onDone={onDone} />;
@@ -364,11 +510,17 @@ function GeneralMemberForm({ onDone }: { onDone: () => void }) {
         />
       </div>
 
+      <CaptchaField
+        captchaRef={captchaRef}
+        onVerify={setCaptchaToken}
+        onExpire={() => setCaptchaToken("")}
+      />
+
       {error && <ErrorBox message={error} />}
 
       <button
         type="submit"
-        disabled={state === "submitting"}
+        disabled={submitDisabled}
         className="btn-primary w-full justify-center disabled:opacity-60"
       >
         {state === "submitting" ? "sending…" : "submit application →"}
